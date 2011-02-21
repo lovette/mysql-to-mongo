@@ -143,13 +143,17 @@ SQLPATH="$OUTPUTDIR/export.sql"
 [ -f "$TABLESPATH" ] || exit_error "$TABLESPATH: No such file"
 [ -r "$TABLESPATH" ] || exit_error "$TABLESPATH: Read permission denied"
 
+# Export directory does not have to exist now, but it's best practice 
+# to use full path since it's run on the MySQL server
+[[ "$CSVDIR" = /* ]] || exit_error "$CSVDIR: Export directory cannot be a relative path"
+
 TABLES=( $(grep -v "^#" "$TABLESPATH" | cut -d" " -f1) )
 [ $? -eq 0 ] || exit_error
 [ ${#TABLES[@]} -gt 0 ] || exit_error "No tables found"
 
 echo "Generating SQL to export ${#TABLES[@]} tables..."
 
-echo "# Execute this script against mysql to export table data to $CSVDIR" > "$SQLPATH"
+echo "# Execute this script with 'mysql' to export table data to '$CSVDIR'" > "$SQLPATH"
 echo "USE $EXPORTDB;" >> "$SQLPATH"
 
 for table in "${TABLES[@]}"
@@ -174,5 +178,7 @@ do
 done
 
 echo "export.sql saved to $OUTPUTDIR"
+echo "Data files will be saved to $CSVDIR on the"
+echo "MySQL server, make sure this directory exists, and is empty"
 
 exit 0
