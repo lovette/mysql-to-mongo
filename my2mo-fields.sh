@@ -5,7 +5,9 @@ CMDNAME=$(basename "$CMDPATH")
 CMDDIR=$(dirname "$CMDPATH")
 CMDARGS=$@
 
-MY2MO_FIELDS_VER="1.0.0"
+MY2MO_FIELDS_VER="1.0.1"
+
+GETOPT_ORDERBY=0
 
 ##########################################################################
 # Functions
@@ -67,6 +69,7 @@ function usage()
 	echo "  OUTPUTDIR      Directory to write import.table and fields files"
 	echo "  SCHEMAFILE     File containing SQL database schema"
 	echo "  -h, --help     Show this help and exit"
+	echo "  -o             Add table ORDER BY on PRIMARY KEY or first table field"
 	echo "  -V, --version  Print version and exit"
 	echo
 	echo "Report bugs to <https://github.com/lovette/mysql-to-mongo/issues>"
@@ -76,7 +79,7 @@ function usage()
  
 function parse_schema()
 {
-	awk -v OUTPUTDIR="$OUTPUTDIR" '
+	awk --re-interval -v OUTPUTDIR="$OUTPUTDIR" -v OPTORDERBY="$GETOPT_ORDERBY" '
 	BEGIN {
 		tablecount = 0;
 		tablespath = sprintf("%s/import.tables", OUTPUTDIR, table);
@@ -89,11 +92,12 @@ function parse_schema()
 		if ($1 == "CREATE" && $2 == "TABLE")
 		{
 			table = $3;
-			gsub(/^[[:punct:]]+|[[:punct:]]+$/, "", table);
-			print table >> tablespath;
+
+			gsub(/^[[:punct:]]{1}|[[:punct:]]{1}$/, "", table); # Trim quotes
 
 			fieldcount = 0;
 			fieldpath = sprintf("%s/fields/%s.fields", OUTPUTDIR, table);
+			orderbyfield = "";
 
 			print "# List of fields to import" > fieldpath;
 			print "# COLUMN [SELECT SQL]" >> fieldpath;
@@ -101,15 +105,36 @@ function parse_schema()
 			while (getline > 0)
 			{
 				field = $1;
+
 				if (match(field, "^(\\)|KEY|PRIMARY|UNIQUE)$"))
+				{
+					if (field == "PRIMARY" && match($3, "^\\(([^\\)]+)", parts))
+					{
+						orderbyfield = parts[1];
+						gsub(/^[[:punct:]]{1}|[[:punct:]]{1}$/, "", orderbyfield); # Trim quotes
+						gsub(/[[:punct:]]{1},[[:punct:]]{1}/, ",", orderbyfield); # Remove imbedded quotes
+						gsub(/,/, ", ", orderbyfield);
+					}
+
 					break;
-				gsub(/^[[:punct:]]+|[[:punct:]]+$/, "", field);
+				}
+
+				gsub(/^[[:punct:]]{1}|[[:punct:]]{1}$/, "", field); # Trim quotes
+
+				if (fieldcount == 0)
+					orderbyfield = field;
+
 				print field >> fieldpath;
 				fieldcount++;
 
 			}
 
 			printf("...%-30s %2d fields\n", table, fieldcount);
+
+			if (OPTORDERBY == 1)
+				print table " ORDER BY " orderbyfield >> tablespath;
+			else
+				print table >> tablespath;
 
 			tables[tablecount++] = table;
 		}
@@ -131,10 +156,11 @@ case "$1" in
 esac
 
 # Parse command line options
-while getopts "hV" opt
+while getopts "hoV" opt
 do
 	case $opt in
 	h  ) usage;;
+	o  ) GETOPT_ORDERBY=1;;
 	V  ) version;;
 	\? ) exit_arg_error;;
 	esac
