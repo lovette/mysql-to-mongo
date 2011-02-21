@@ -90,7 +90,6 @@ function usage()
 	echo "  CSVDIR         Directory where exported data files will be written"
 	echo "  EXPORTDB       MySQL database to export"
 	echo "  -h, --help     Show this help and exit"
-	echo "  -n             Dry run; do not import"
 	echo "  -V, --version  Print version and exit"
 	echo
 	echo "Report bugs to <https://github.com/lovette/mysql-to-mongo/issues>"
