@@ -46,14 +46,14 @@ Run each command with `--help` argument or see the man pages for available OPTIO
 
 ## Quick Start
 
-Here are the commands necessary to import an entire database into MongoDB.
+Here are the commands necessary to import an entire MySQL database into MongoDB.
 
 	$ mkdir -p my2mo/csvdata
 	$ cd my2mo
 	$ mysqldump --no-data mydatabase > schema.sql
 	$ my2mo-fields . schema.sql
 	$ my2mo-export . csvdata mydatabase
-	$ mysql –p –u root < export.sql
+	$ mysql -p -u root < export.sql
 	$ my2mo-import . csvdata modatabase
 
 
