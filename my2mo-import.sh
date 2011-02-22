@@ -60,6 +60,20 @@ function safe_import()
 	fi
 }
 
+# gettablenames(path)
+# Outputs table names (first column) from 'path'
+function gettablenames()
+{
+	grep -v "^#" "$1" | cut -d" " -f1
+}
+
+# getfieldnames(path)
+# Outputs field names (first column) from 'path'
+function getfieldnames()
+{
+	grep -v "^#" "$1" | cut -d" " -f1
+}
+
 # Print version and exit
 function version()
 {
@@ -163,7 +177,7 @@ LOGPATH="$OUTPUTDIR/mongoimport.log"
 # We need to know if any of our pipe commands fail, not just the last one
 set -o pipefail
 
-TABLES=( $(grep -v "^#" "$TABLESPATH" | cut -d" " -f1) )
+TABLES=( $(gettablenames "$TABLESPATH") )
 [ $? -eq 0 ] || exit_error
 [ ${#TABLES[@]} -gt 0 ] || exit_error "No tables found"
 
@@ -183,7 +197,7 @@ do
 	[ -f "$fieldpath" ] || exit_error "...$table, no field file found!"
 
     # Create the list of column names to import as comma-delimited list
-    fields=( $(grep -v "^#" "$fieldpath" | cut -d" " -f1) )
+	fields=( $(getfieldnames "$fieldpath") )
     fields="${fields[@]}"
     fields=${fields// /, }
 

@@ -69,6 +69,20 @@ function array_join()
 	echo ${str/$glue/}
 }
 
+# gettablenames(path)
+# Outputs table names (first column) from 'path'
+function gettablenames()
+{
+	grep -v "^#" "$1" | cut -d" " -f1
+}
+
+# getselectexpr(path)
+# Outputs field name or expression from 'path'
+function getselectexpr()
+{
+	grep -v "^#" "$1" | cut -d" " -f2-
+}
+
 # Print version and exit
 function version()
 {
@@ -158,7 +172,7 @@ SQLPATH="$OUTPUTDIR/export.sql"
 # to use full path since it's run on the MySQL server
 [[ "$CSVDIR" = /* ]] || exit_error "$CSVDIR: Export directory cannot be a relative path"
 
-TABLES=( $(grep -v "^#" "$TABLESPATH" | cut -d" " -f1) )
+TABLES=( $(gettablenames "$TABLESPATH") )
 [ $? -eq 0 ] || exit_error
 [ ${#TABLES[@]} -gt 0 ] || exit_error "No tables found"
 
@@ -175,7 +189,7 @@ do
 	# Convert fields/expressions into a comma-delimited list
 	OLD_IFS="$IFS"
 	IFS=$'\n'
-	fields=( $(grep -v "^#" "$fieldpath" | cut -d" " -f2-) )
+	fields=( $(getselectexpr "$fieldpath") )
 	IFS="$OLD_IFS"
 	fields=$(array_join ", " "${fields[@]}")
 
