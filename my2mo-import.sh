@@ -13,9 +13,10 @@ CMDNAME=$(basename "$CMDPATH")
 CMDDIR=$(dirname "$CMDPATH")
 CMDARGS=$@
 
-MY2MO_IMPORT_VER="1.0.0"
+MY2MO_IMPORT_VER="1.0.1"
 
 GETOPT_DRYRUN=0
+GETOPT_TABDELIMITED=0
 
 ##########################################################################
 # Functions
@@ -91,6 +92,7 @@ function usage()
 	echo "  IMPORTOPTIONS  Options to pass directly to mongoimport"
 	echo "  -h, --help     Show this help and exit"
 	echo "  -n             Dry run; do not import"
+	echo "  -t             Data files are tab-delimited"
 	echo "  -V, --version  Print version and exit"
 	echo
 	echo "Report bugs to <https://github.com/lovette/mysql-to-mongo/issues>"
@@ -109,11 +111,12 @@ case "$1" in
 esac
 
 # Parse command line options
-while getopts "hnV" opt
+while getopts "hntV" opt
 do
 	case $opt in
 	h  ) usage;;
 	n  ) GETOPT_DRYRUN=1;;
+	t  ) GETOPT_TABDELIMITED=1;;
 	V  ) version;;
 	\? ) exit_arg_error;;
 	esac
@@ -172,6 +175,9 @@ for table in "${TABLES[@]}"
 do
     csvpath="$CSVDIR/$table.csv"
     fieldpath="$FIELDSDIR/$table.fields"
+	filetype="csv"
+
+	[ $GETOPT_TABDELIMITED -eq 1 ] && filetype="tsv"
 
 	[ -f "$csvpath" ] || { echo "...$table, skipped (no data file)"; continue; }
 	[ -f "$fieldpath" ] || exit_error "...$table, no field file found!"
@@ -189,7 +195,7 @@ do
 		echo
 		echo "-- BEGIN TABLE: $table"
 		echo "fields: $fields"
-		safe_import --db "$IMPORTDB" --type csv --drop -c "$table" --file "$csvpath" --fields "${fields// /}" $IMPORTARGS
+		safe_import --db "$IMPORTDB" --type "$filetype" --drop -c "$table" --file "$csvpath" --fields "${fields// /}" $IMPORTARGS
 		[ $? -eq 0 ] || echo_stderr "see $(basename "$LOGPATH") for details"
 		echo "-- END TABLE: $table"
 

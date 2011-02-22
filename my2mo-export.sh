@@ -13,7 +13,9 @@ CMDNAME=$(basename "$CMDPATH")
 CMDDIR=$(dirname "$CMDPATH")
 CMDARGS=$@
 
-MY2MO_EXPORT_VER="1.0.0"
+MY2MO_EXPORT_VER="1.0.1"
+
+GETOPT_TABDELIMITED=0
 
 ##########################################################################
 # Functions
@@ -86,7 +88,7 @@ function usage()
 {
 	echo "Reads an 'import.tables' file and set of fields files and creates"
 	echo "an 'export.sql' file containing 'SELECT INTO OUTFILE' statements"
-	echo "for use by MySQL to create comma-delimited data files for each table."
+	echo "for use by MySQL to create comma or tab-delimited data files for each table."
 	echo "The 'import.tables' and fields files can be created from scratch or"
 	echo "from an SQL database schema by my2mo-fields. The data files generated"
 	echo "can be imported into a MongoDB database by my2mo-import."
@@ -98,6 +100,7 @@ function usage()
 	echo "  CSVDIR         Directory where exported data files will be written"
 	echo "  EXPORTDB       MySQL database to export"
 	echo "  -h, --help     Show this help and exit"
+	echo "  -t             Create tab-delimited data files"
 	echo "  -V, --version  Print version and exit"
 	echo
 	echo "Report bugs to <https://github.com/lovette/mysql-to-mongo/issues>"
@@ -116,10 +119,11 @@ case "$1" in
 esac
 
 # Parse command line options
-while getopts "hV" opt
+while getopts "htV" opt
 do
 	case $opt in
 	h  ) usage;;
+	t  ) GETOPT_TABDELIMITED=1;;
 	V  ) version;;
 	\? ) exit_arg_error;;
 	esac
@@ -181,7 +185,11 @@ do
 	tablesql=$(awk "{ if (\$1 == \"$table\") print }" "$TABLESPATH" | cut -d" " -f2- -s)
 	[ -z "$tablesql" ] || tablesql=" ${tablesql}"
 
-	echo "SELECT $fields FROM ${table}${tablesql} INTO OUTFILE \"$csvpath\" FIELDS TERMINATED BY ',' OPTIONALLY ENCLOSED BY '\"' LINES TERMINATED BY '\\n';" >> "$SQLPATH"
+	if [ $GETOPT_TABDELIMITED -eq 0 ]; then
+		echo "SELECT $fields FROM ${table}${tablesql} INTO OUTFILE \"$csvpath\" FIELDS TERMINATED BY ',' OPTIONALLY ENCLOSED BY '\"' LINES TERMINATED BY '\\n';" >> "$SQLPATH"
+	else
+		echo "SELECT $fields FROM ${table}${tablesql} INTO OUTFILE \"$csvpath\" FIELDS TERMINATED BY '\\t' ENCLOSED BY '' ESCAPED BY '\\\\' LINES TERMINATED BY '\\n';" >> "$SQLPATH"
+	fi
 done
 
 echo "export.sql saved to $OUTPUTDIR"
