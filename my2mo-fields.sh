@@ -1,4 +1,12 @@
 #!/bin/bash
+#
+# Simplify importing data files with mongoimport.
+#
+# Copyright (c) 2011 Lance Lovette. All rights reserved.
+# Licensed under the BSD License.
+# See the file LICENSE.txt for the full license text.
+#
+# Available from https://github.com/lovette/mysql-to-mongo
 
 CMDPATH=$(readlink -f "$0")
 CMDNAME=$(basename "$CMDPATH")
