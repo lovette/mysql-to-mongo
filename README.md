@@ -146,3 +146,14 @@ If you need to specify additional options for `mongoimport` (for example, `--hos
 just include them at the end of the command line after a `--`.
 Details of the import process are saved to the file `mongoimport.log`.
 
+
+## Known Issues
+
+Through at least version 1.6.5, `mongoimport` has some serious parsing issues
+<sup>[1](http://jira.mongodb.org/browse/SERVER-2379),[2](http://jira.mongodb.org/browse/SERVER-805),[3](http://jira.mongodb.org/browse/SERVER-2604)</sup>
+with both comma and tab-delimited data files. Until these issues are resolved,
+your best option is to run `my2mo-fields` with the `-W` option and run
+`my2mo-export` and `my2mo-import` with the `-t` option. This will create tab-delimited data files
+where all tab, carriage return and newline characters (`\t`,`\r`,`\n`) are replaced
+with the text `<TAB>`, `<CR>` and `<LF>` respectively
+for all `CHAR`, `TEXT` and `BLOB` field types.

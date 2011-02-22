@@ -18,6 +18,7 @@ MY2MO_FIELDS_VER="1.0.1"
 GETOPT_ORDERBY=0
 GETOPT_FIELDSONLY=0
 GETOPT_TABLESONLY=0
+GETOPT_NOSPACECHARS=0
 
 ##########################################################################
 # Functions
@@ -28,45 +29,45 @@ function echo_stderr()
 {
 	echo $* 1>&2
 }
-    
+
 # exit_arg_error(string)
 # Outputs message to stderr and exits
 function exit_arg_error()
-{   
+{
 	local message="$1"
 
 	[ -n "$message" ] && echo_stderr "$CMDNAME: $message"
 	echo_stderr "Try '$CMDNAME --help' for more information."
 	exit 1
-}   
-    
+}
+
 # exit_error(string)
 # Outputs message to stderr and exits
 function exit_error()
-{   
+{
 	local message="$1"
 
 	[ -n "$message" ] && echo_stderr "$CMDNAME: $message"
 	exit 1
-} 
+}
 
 # Print version and exit
 function version()
-{   
+{
 	echo "my2mo-fields $MY2MO_FIELDS_VER"
 	echo
 	echo "Copyright (C) 2011 Lance Lovette"
 	echo "Licensed under the BSD License."
 	echo "See the distribution file LICENSE.txt for the full license text."
-	echo 
+	echo
 	echo "Written by Lance Lovette <https://github.com/lovette>"
 
 	exit 0
 }
 
-# Print usage and exit 
+# Print usage and exit
 function usage()
-{   
+{
 	echo "Parses an SQL database schema file and creates an 'import.tables'"
 	echo "file with a list of tables found, and a directory containing a file"
 	echo "for each table listing the table columns/fields."
@@ -83,6 +84,7 @@ function usage()
 	echo "  -o             Add table ORDER BY on PRIMARY KEY or first table field"
 	echo "  -T             Update only import.tables file"
 	echo "  -V, --version  Print version and exit"
+	echo "  -W             Workaround for mongoimport issues with \\t,\\r, and \\n characters"
 	echo
 	echo "Report bugs to <https://github.com/lovette/mysql-to-mongo/issues>"
 
@@ -93,6 +95,7 @@ function parse_schema()
 {
 	awk --re-interval -v OUTPUTDIR="$OUTPUTDIR" -v OPTORDERBY="$GETOPT_ORDERBY" \
 			-v FIELDSONLY="$GETOPT_FIELDSONLY" -v TABLESONLY="$GETOPT_TABLESONLY" \
+			-v NOSPACECHARS="$GETOPT_NOSPACECHARS" \
 	'
 	BEGIN {
 		tablecount = 0;
@@ -119,6 +122,7 @@ function parse_schema()
 			while (getline > 0)
 			{
 				field = $1;
+				fieldtype = match($2, "^([^[:punct:]]+)", parts) ? toupper(parts[1]) : toupper($2);
 
 				if (match(field, "^(\\)|KEY|PRIMARY|UNIQUE)$"))
 				{
@@ -138,7 +142,13 @@ function parse_schema()
 				if (fieldcount == 0)
 					orderbyfield = field;
 
-				print field >> fieldpath;
+				if (!NOSPACECHARS)
+					print field >> fieldpath;
+				else if (match(fieldtype, "(TEXT|CHAR|BLOB)$"))
+					print field " " sprintf("REPLACE(REPLACE(REPLACE(%s, \"\\r\", \"<CR>\"), \"\\n\", \"<LF>\"), \"\\t\", \"<TAB>\") AS %s", field, field) >> fieldpath;
+				else
+					print field >> fieldpath;
+
 				fieldcount++;
 			}
 
@@ -169,7 +179,7 @@ case "$1" in
 esac
 
 # Parse command line options
-while getopts "FhoTV" opt
+while getopts "FhoTVW" opt
 do
 	case $opt in
 	F  ) GETOPT_FIELDSONLY=1;;
@@ -177,6 +187,7 @@ do
 	o  ) GETOPT_ORDERBY=1;;
 	T  ) GETOPT_TABLESONLY=1;;
 	V  ) version;;
+	W  ) GETOPT_NOSPACECHARS=1;;
 	\? ) exit_arg_error;;
 	esac
 done
