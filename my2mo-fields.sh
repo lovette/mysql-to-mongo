@@ -16,6 +16,8 @@ CMDARGS=$@
 MY2MO_FIELDS_VER="1.0.1"
 
 GETOPT_ORDERBY=0
+GETOPT_FIELDSONLY=0
+GETOPT_TABLESONLY=0
 
 ##########################################################################
 # Functions
@@ -76,21 +78,25 @@ function usage()
 	echo "Options:"
 	echo "  OUTPUTDIR      Directory to write import.table and fields files"
 	echo "  SCHEMAFILE     File containing SQL database schema"
+	echo "  -F             Update only table fields files"
 	echo "  -h, --help     Show this help and exit"
 	echo "  -o             Add table ORDER BY on PRIMARY KEY or first table field"
+	echo "  -T             Update only import.tables file"
 	echo "  -V, --version  Print version and exit"
 	echo
 	echo "Report bugs to <https://github.com/lovette/mysql-to-mongo/issues>"
 
 	exit 0
 }
- 
+
 function parse_schema()
 {
-	awk --re-interval -v OUTPUTDIR="$OUTPUTDIR" -v OPTORDERBY="$GETOPT_ORDERBY" '
+	awk --re-interval -v OUTPUTDIR="$OUTPUTDIR" -v OPTORDERBY="$GETOPT_ORDERBY" \
+			-v FIELDSONLY="$GETOPT_FIELDSONLY" -v TABLESONLY="$GETOPT_TABLESONLY" \
+	'
 	BEGIN {
 		tablecount = 0;
-		tablespath = sprintf("%s/import.tables", OUTPUTDIR, table);
+		tablespath = (!FIELDSONLY) ? sprintf("%s/import.tables", OUTPUTDIR, table) : "/dev/null";
 
 		print "# List of tables to import" > tablespath;
 		print "# TABLE [SELECT SQL]" >> tablespath;
@@ -104,7 +110,7 @@ function parse_schema()
 			gsub(/^[[:punct:]]{1}|[[:punct:]]{1}$/, "", table); # Trim quotes
 
 			fieldcount = 0;
-			fieldpath = sprintf("%s/fields/%s.fields", OUTPUTDIR, table);
+			fieldpath = (!TABLESONLY) ? sprintf("%s/fields/%s.fields", OUTPUTDIR, table) : "/dev/null";
 			orderbyfield = "";
 
 			print "# List of fields to import" > fieldpath;
@@ -134,7 +140,6 @@ function parse_schema()
 
 				print field >> fieldpath;
 				fieldcount++;
-
 			}
 
 			printf("...%-30s %2d fields\n", table, fieldcount);
@@ -164,11 +169,13 @@ case "$1" in
 esac
 
 # Parse command line options
-while getopts "hoV" opt
+while getopts "FhoTV" opt
 do
 	case $opt in
+	F  ) GETOPT_FIELDSONLY=1;;
 	h  ) usage;;
 	o  ) GETOPT_ORDERBY=1;;
+	T  ) GETOPT_TABLESONLY=1;;
 	V  ) version;;
 	\? ) exit_arg_error;;
 	esac
@@ -181,6 +188,8 @@ SCHEMAFILE="$2"
 
 [ -n "$SCHEMAFILE" ] || exit_arg_error "missing schema file"
 [ -n "$OUTPUTDIR" ] || exit_arg_error "missing output directory"
+
+[ $GETOPT_FIELDSONLY -eq 0 ] || [ $GETOPT_TABLESONLY -eq 0 ] || exit_arg_error "-F and -T cannot be used together"
 
 # Convert to real path
 [ -d "$OUTPUTDIR" ] && OUTPUTDIR=$(readlink -f "$OUTPUTDIR")
@@ -199,7 +208,7 @@ echo "Generating tables and fields from $(basename "$SCHEMAFILE")..."
 parse_schema || exit_error
 
 echo "Output saved to $OUTPUTDIR"
-echo "Tables saved to import.tables"
-echo "Field files saved to fields/*.fields"
+[ $GETOPT_FIELDSONLY -eq 0 ] && echo "Tables saved to import.tables"
+[ $GETOPT_TABLESONLY -eq 0 ] && echo "Field files saved to fields/*.fields"
 
 exit 0
