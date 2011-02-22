@@ -114,6 +114,38 @@ function usage()
 	exit 0
 }   
  
+# importtable(table)
+function importtable()
+{
+	csvpath="$CSVDIR/$table.csv"
+	fieldpath="$FIELDSDIR/$table.fields"
+	filetype="csv"
+
+	[ $GETOPT_TABDELIMITED -eq 1 ] && filetype="tsv"
+
+	[ -f "$csvpath" ] || { echo "...$table, skipped (no data file)"; continue; }
+	[ -f "$fieldpath" ] || exit_error "...$table, no field file found!"
+
+	# Create the list of column names to import as comma-delimited list
+	fields=( $(getfieldnames "$fieldpath") )
+	fields="${fields[@]}"
+	fields=${fields// /, }
+
+	[ -n "$fields" ] || exit_error "...$table, no import fields defined!"
+
+	echo "...$table"
+
+	(
+		echo
+		echo "-- BEGIN TABLE: $table"
+		echo "fields: $fields"
+		safe_import --db "$IMPORTDB" --type "$filetype" --drop -c "$table" --file "$csvpath" --fields "${fields// /}" $IMPORTARGS
+		[ $? -eq 0 ] || echo_stderr "see $(basename "$LOGPATH") for details"
+		echo "-- END TABLE: $table"
+
+	) >> "$LOGPATH"
+}
+
 ##########################################################################
 # Main
 
@@ -187,33 +219,7 @@ echo "Results of mongoimport of ${#TABLES[@]} tables into Mongo database '$IMPOR
 
 for table in "${TABLES[@]}"
 do
-    csvpath="$CSVDIR/$table.csv"
-    fieldpath="$FIELDSDIR/$table.fields"
-	filetype="csv"
-
-	[ $GETOPT_TABDELIMITED -eq 1 ] && filetype="tsv"
-
-	[ -f "$csvpath" ] || { echo "...$table, skipped (no data file)"; continue; }
-	[ -f "$fieldpath" ] || exit_error "...$table, no field file found!"
-
-    # Create the list of column names to import as comma-delimited list
-	fields=( $(getfieldnames "$fieldpath") )
-    fields="${fields[@]}"
-    fields=${fields// /, }
-
-	[ -n "$fields" ] || exit_error "...$table, no import fields defined!"
-
-	echo "...$table"
-
-	(
-		echo
-		echo "-- BEGIN TABLE: $table"
-		echo "fields: $fields"
-		safe_import --db "$IMPORTDB" --type "$filetype" --drop -c "$table" --file "$csvpath" --fields "${fields// /}" $IMPORTARGS
-		[ $? -eq 0 ] || echo_stderr "see $(basename "$LOGPATH") for details"
-		echo "-- END TABLE: $table"
-
-	) >> "$LOGPATH"
+	importtable "$table"
 done
 
 echo "Import complete!"
