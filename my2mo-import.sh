@@ -96,7 +96,7 @@ function version()
 # Print usage and exit
 function usage()
 {
-	echo "Runs 'mongoimport' to import a set of comma-delimited data files"
+	echo "Runs 'mongoimport' to import a set of comma or tab-delimited data files"
 	echo "from a database export. The list of tables and fields to import"
 	echo "are read from an 'import.tables' file and a set of *.fields files."
     echo "The 'import.tables' and fields files can be created from scratch or"

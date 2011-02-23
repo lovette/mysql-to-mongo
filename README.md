@@ -25,7 +25,7 @@ Only one of the scripts is directly related to MySQL.</sub>
 ## Requirements
 
 * [mongoimport](http://www.mongodb.org/display/DOCS/Import+Export+Tools)
-* [MySQL](http://www.mysql.com/) (really, all you need is a set of comma-delimited data files)
+* [MySQL](http://www.mysql.com/) (really, all you need is a set of comma or tab-delimited data files)
 * [BASH 3.0 or later](http://www.gnu.org/software/bash/)
 * [Awk 3.0 or later](http://www.gnu.org/software/gawk/)
 
@@ -120,7 +120,7 @@ to select the column data.
 
 ### Step 2: Create SQL commands to create data files
 
-The next step is to export the database tables to comma-delimited data files. This requires
+The next step is to export the database tables to comma or tab-delimited data files. This requires
 running a series of [mysqldump](http://dev.mysql.com/doc/refman/5.5/en/mysqldump.html)
 or [SELECT INTO OUTFILE](http://dev.mysql.com/doc/refman/5.5/en/select.html)
 statements against your MySQL database. The `my2mo-export` script facilitates the latter option.

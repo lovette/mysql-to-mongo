@@ -6,7 +6,7 @@ my2mo-import \- mysql-to-mongo script to import data files with mongoimport
 .B my2mo-import
 [\fIOPTION\fR]... \fICSVDIR IMPORTDB \fR[\fI-- IMPORTOPTIONS\fR]
 .SH DESCRIPTION
-Runs 'mongoimport' to import a set of comma\-delimited data files
+Runs 'mongoimport' to import a set of comma or tab\-delimited data files
 from a database export. The list of tables and fields to import
 are read from an 'import.tables' file and a set of *.fields files.
 The 'import.tables' and fields files can be created from scratch or
@@ -31,7 +31,7 @@ Show this help and exit
 \fB\-i\fR
 Convert data files to UTF\-8 with iconv prior to import
 .HP
-\fB\-I\fR             \fB\-i\fR and delete original data file after conversion to UTF\-8
+\fB\-I\fR             \fB\-i\fR and delete original data file if no changes are made
 .TP
 \fB\-n\fR
 Dry run; do not import
