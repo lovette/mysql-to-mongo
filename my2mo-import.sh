@@ -117,17 +117,18 @@ function usage()
 # importtable(table)
 function importtable()
 {
-	csvpath="$CSVDIR/$table.csv"
-	fieldpath="$FIELDSDIR/$table.fields"
-	filetype="csv"
+	local table="$1"
+	local csvpath="$CSVDIR/$table.csv"
+	local fieldpath="$FIELDSDIR/$table.fields"
+	local filetype="csv"
 
 	[ $GETOPT_TABDELIMITED -eq 1 ] && filetype="tsv"
 
-	[ -f "$csvpath" ] || { echo "...$table, skipped (no data file)"; continue; }
+	[ -f "$csvpath" ] || exit_error "...$table, no data file found!"
 	[ -f "$fieldpath" ] || exit_error "...$table, no field file found!"
 
 	# Create the list of column names to import as comma-delimited list
-	fields=( $(getfieldnames "$fieldpath") )
+	local fields=( $(getfieldnames "$fieldpath") )
 	fields="${fields[@]}"
 	fields=${fields// /, }
 
