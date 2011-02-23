@@ -156,9 +156,9 @@ If you need to specify additional options for `mongoimport` (for example, `--hos
 just include them at the end of the command line after a `--`.
 Details of the import process are saved to the file `mongoimport.log`.
 
-## Table Joins
+## Data File Joins
 
-`my2mo-import` supports joining two tables using the `join` command. Joined tables are listed
+`my2mo-import` supports joining two table data files using the `join` command. Joined tables are listed
 in a `join.tables` file. This file lists the new table name, the two tables to join,
 and the fields to join on. Because `join` requires both data files to be sorted on the join field,
 you can specify which field the resulting data should be sorted by before importing
@@ -168,6 +168,10 @@ will not include the join field of the righthand table.
 	# List of tables to join
 	# NewTable Table1.Field Table2.Field FinalSortField
 	UserCity User.AddressCityID City.CityID AddressCityID
+
+Note that this join is done on the data files themselves, and not by MySQL. If you want to import
+a table that is a result of an SQL join, you can edit the `export.sql` file by hand and create
+a corresponding `.fields` file.
 
 
 ## Workarounds
