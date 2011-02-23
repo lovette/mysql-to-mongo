@@ -146,6 +146,19 @@ If you need to specify additional options for `mongoimport` (for example, `--hos
 just include them at the end of the command line after a `--`.
 Details of the import process are saved to the file `mongoimport.log`.
 
+## Table Joins
+
+`my2mo-import` supports joining two tables using the `join` command. Joined tables are listed
+in a `join.tables` file. This file lists the new table name, the two tables to join,
+and the fields to join on. Because `join` requires both data files to be sorted on the join field,
+you can specify which field the resulting data should be sorted by before importing
+into the database. Use `-` if you don't want to sort the join results. The resulting table
+will not include the join field of the righthand table.
+
+	# List of tables to join
+	# NewTable Table1.Field Table2.Field FinalSortField
+	UserCity User.AddressCityID City.CityID AddressCityID
+
 
 ## Known Issues
 
