@@ -11,6 +11,16 @@ handful of tables. This collection of scripts makes the process much less manual
 Only one of the scripts is directly related to MySQL.</sub>
 
 
+## Features
+
+* Supports comma and tab-delimited data files
+* Automatic export SQL generation
+* Easily filter exported records by customizing table SELECT SQL
+* Easily change exported field values by customizing column SELECT SQL
+* Create collections from joined data files
+* Workarounds for known `mongoimport` parsing issues
+
+
 ## Requirements
 
 * [mongoimport](http://www.mongodb.org/display/DOCS/Import+Export+Tools)
@@ -160,7 +170,7 @@ will not include the join field of the righthand table.
 	UserCity User.AddressCityID City.CityID AddressCityID
 
 
-## Known Issues
+## Workarounds
 
 Through at least version 1.6.5, `mongoimport` has some serious parsing issues
 <sup>[1](http://jira.mongodb.org/browse/SERVER-2379),[2](http://jira.mongodb.org/browse/SERVER-805),[3](http://jira.mongodb.org/browse/SERVER-2604)</sup>
