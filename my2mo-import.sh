@@ -49,14 +49,14 @@ function exit_error()
 	exit 1
 }
 
-# safe_import(args)
-# Executes mongoimport unless dry run option is set
-function safe_import()
+# safe_exec(args)
+# Executes args unless dry run option is set
+function safe_exec()
 {
 	if [ $GETOPT_DRYRUN -eq 0 ]; then
-		eval mongoimport $@
+		eval $@
 	else
-		echo "mongoimport $@"
+		echo "$@"
 	fi
 }
 
@@ -139,7 +139,7 @@ function importtable()
 		echo
 		echo "-- BEGIN TABLE: $table"
 		echo "fields: $fields"
-		safe_import --db "$IMPORTDB" --type "$filetype" --drop -c "$table" --file "$csvpath" --fields "${fields// /}" $IMPORTARGS
+		safe_exec mongoimport --db "$IMPORTDB" --type "$filetype" --drop -c "$table" --file "$csvpath" --fields "${fields// /}" $IMPORTARGS
 		[ $? -eq 0 ] || echo_stderr "see $(basename "$LOGPATH") for details"
 		echo "-- END TABLE: $table"
 
@@ -203,14 +203,14 @@ function importtablejoin()
 		if [ $GETOPT_DRYRUN -eq 1 ]; then
 			echo join -1 "$fieldindex1" -2 "$fieldindex2" -a 1 -t "\\t"  \<\(sort -t "\\t" -k "$fieldindex1" "$csvpath1"\) \<\(sort -t "\\t" -k "$fieldindex2" "$csvpath2"\) \|
 			[ "$sortfield" = "-" ] || echo "sort -n -t '\\t' -k $sortfieldindex" \|
-			safe_import --db "$IMPORTDB" --type tsv --drop -c "$newtable" --fields "${newfields// /}" $IMPORTARGS
+			safe_exec mongoimport --db "$IMPORTDB" --type tsv --drop -c "$newtable" --fields "${newfields// /}" $IMPORTARGS
 		elif [ "$sortfield" = "-" ]; then
 			join -1 "$fieldindex1" -2 "$fieldindex2" -a 1 -t $'\t' <(sort -t $'\t' -k "$fieldindex1" "$csvpath1") <(sort -t $'\t' -k "$fieldindex2" "$csvpath2") \
-				| safe_import --db "$IMPORTDB" --type tsv --drop -c "$newtable" --fields "${newfields// /}" $IMPORTARGS
+				| safe_exec mongoimport --db "$IMPORTDB" --type tsv --drop -c "$newtable" --fields "${newfields// /}" $IMPORTARGS
 		else
 			join -1 "$fieldindex1" -2 "$fieldindex2" -a 1 -t $'\t' <(sort -t $'\t' -k "$fieldindex1" "$csvpath1") <(sort -t $'\t' -k "$fieldindex2" "$csvpath2") \
 				| sort -n -t $'\t' -k "$sortfieldindex" \
-				| safe_import --db "$IMPORTDB" --type tsv --drop -c "$newtable" --fields "${newfields// /}" $IMPORTARGS
+				| safe_exec mongoimport --db "$IMPORTDB" --type tsv --drop -c "$newtable" --fields "${newfields// /}" $IMPORTARGS
 		fi
 
 		[ $? -eq 0 ] || echo_stderr "see $(basename "$LOGPATH") for details"
