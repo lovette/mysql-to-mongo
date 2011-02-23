@@ -15,6 +15,7 @@ CMDARGS=$@
 
 MY2MO_IMPORT_VER="1.0.2"
 
+OUTPUTDIR="."
 GETOPT_DRYRUN=0
 GETOPT_TABDELIMITED=0
 
@@ -97,13 +98,13 @@ function usage()
     echo "The 'import.tables' and fields files can be created from scratch or"
 	echo "from an SQL database schema by my2mo-fields."
     echo
-	echo "Usage: my2mo-import [OPTION]... OUTPUTDIR CSVDIR IMPORTDB [-- IMPORTOPTIONS]"
+	echo "Usage: my2mo-import [OPTION]... CSVDIR IMPORTDB [-- IMPORTOPTIONS]"
 	echo
 	echo "Options:"
-    echo "  OUTPUTDIR      Directory with import.tables and fields directory"
     echo "  CSVDIR         Directory with data files"
     echo "  IMPORTDB       Mongo database to import into"
 	echo "  IMPORTOPTIONS  Options to pass directly to mongoimport"
+    echo "  -d DIRECTORY   Directory with import.tables and fields directory"
 	echo "  -h, --help     Show this help and exit"
 	echo "  -n             Dry run; do not import"
 	echo "  -t             Data files are tab-delimited"
@@ -232,9 +233,10 @@ case "$1" in
 esac
 
 # Parse command line options
-while getopts "hntV" opt
+while getopts "d:hntV" opt
 do
 	case $opt in
+	d  ) OUTPUTDIR="$OPTARG";;
 	h  ) usage;;
 	n  ) GETOPT_DRYRUN=1;;
 	t  ) GETOPT_TABDELIMITED=1;;
@@ -245,8 +247,6 @@ done
 
 shift $(($OPTIND - 1))
 
-OUTPUTDIR="$1"
-shift
 CSVDIR="$1"
 shift
 IMPORTDB="$1"

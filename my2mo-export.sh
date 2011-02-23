@@ -13,8 +13,9 @@ CMDNAME=$(basename "$CMDPATH")
 CMDDIR=$(dirname "$CMDPATH")
 CMDARGS=$@
 
-MY2MO_EXPORT_VER="1.0.1"
+MY2MO_EXPORT_VER="1.0.2"
 
+OUTPUTDIR="."
 GETOPT_TABDELIMITED=0
 
 ##########################################################################
@@ -107,12 +108,12 @@ function usage()
 	echo "from an SQL database schema by my2mo-fields. The data files generated"
 	echo "can be imported into a MongoDB database by my2mo-import."
 	echo
-	echo "Usage: my2mo-export [OPTION]... OUTPUTDIR CSVDIR EXPORTDB"
+	echo "Usage: my2mo-export [OPTION]... CSVDIR EXPORTDB"
 	echo
 	echo "Options:"
-	echo "  OUTPUTDIR      Directory with import.tables and fields directory"
 	echo "  CSVDIR         Directory where exported data files will be written"
 	echo "  EXPORTDB       MySQL database to export"
+	echo "  -d DIRECTORY   Directory with import.tables and fields directory"
 	echo "  -h, --help     Show this help and exit"
 	echo "  -t             Create tab-delimited data files"
 	echo "  -V, --version  Print version and exit"
@@ -133,9 +134,10 @@ case "$1" in
 esac
 
 # Parse command line options
-while getopts "htV" opt
+while getopts "d:htV" opt
 do
 	case $opt in
+	d  ) OUTPUTDIR="$OPTARG";;
 	h  ) usage;;
 	t  ) GETOPT_TABDELIMITED=1;;
 	V  ) version;;
@@ -145,11 +147,9 @@ done
 
 shift $(($OPTIND - 1))
 
-OUTPUTDIR="$1"
-CSVDIR="$2"
-EXPORTDB="$3"
+CSVDIR="$1"
+EXPORTDB="$2"
 
-[ -n "$OUTPUTDIR" ] || exit_arg_error "missing output directory"
 [ -n "$CSVDIR" ] || exit_arg_error "missing data directory"
 [ -n "$EXPORTDB" ] || exit_arg_error "missing export database name"
 

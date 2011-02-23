@@ -13,8 +13,9 @@ CMDNAME=$(basename "$CMDPATH")
 CMDDIR=$(dirname "$CMDPATH")
 CMDARGS=$@
 
-MY2MO_FIELDS_VER="1.0.1"
+MY2MO_FIELDS_VER="1.0.2"
 
+OUTPUTDIR="."
 GETOPT_ORDERBY=0
 GETOPT_FIELDSONLY=0
 GETOPT_TABLESONLY=0
@@ -74,11 +75,11 @@ function usage()
 	echo "These files are then used by my2mo-export and my2mo-import"
 	echo "to import data files into a MongoDB database."
 	echo
-	echo "Usage: my2mo-fields [OPTION]... OUTPUTDIR SCHEMAFILE"
+	echo "Usage: my2mo-fields [OPTION]... SCHEMAFILE"
 	echo
 	echo "Options:"
-	echo "  OUTPUTDIR      Directory to write import.table and fields files"
 	echo "  SCHEMAFILE     File containing SQL database schema"
+	echo "  -d DIRECTORY   Directory to write import.table and fields files"
 	echo "  -F             Update only table fields files"
 	echo "  -h, --help     Show this help and exit"
 	echo "  -o             Add table ORDER BY on PRIMARY KEY or first table field"
@@ -179,9 +180,10 @@ case "$1" in
 esac
 
 # Parse command line options
-while getopts "FhoTVW" opt
+while getopts "d:FhoTVW" opt
 do
 	case $opt in
+	d  ) OUTPUTDIR="$OPTARG";;
 	F  ) GETOPT_FIELDSONLY=1;;
 	h  ) usage;;
 	o  ) GETOPT_ORDERBY=1;;
@@ -194,11 +196,9 @@ done
 
 shift $(($OPTIND - 1))
 
-OUTPUTDIR="$1"
-SCHEMAFILE="$2"
+SCHEMAFILE="$1"
 
 [ -n "$SCHEMAFILE" ] || exit_arg_error "missing schema file"
-[ -n "$OUTPUTDIR" ] || exit_arg_error "missing output directory"
 
 [ $GETOPT_FIELDSONLY -eq 0 ] || [ $GETOPT_TABLESONLY -eq 0 ] || exit_arg_error "-F and -T cannot be used together"
 
