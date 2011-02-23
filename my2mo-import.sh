@@ -18,6 +18,10 @@ MY2MO_IMPORT_VER="1.0.2"
 OUTPUTDIR="."
 GETOPT_DRYRUN=0
 GETOPT_TABDELIMITED=0
+GETOPT_ICONV=0
+GETOPT_ICONVDELETE=0
+
+ICONV_BIN=$(which iconv 2> /dev/null || echo /usr/bin/iconv)
 
 ##########################################################################
 # Functions
@@ -106,6 +110,8 @@ function usage()
 	echo "  IMPORTOPTIONS  Options to pass directly to mongoimport"
     echo "  -d DIRECTORY   Directory with import.tables and fields directory"
 	echo "  -h, --help     Show this help and exit"
+	echo "  -i             Convert data files to UTF-8 with iconv prior to import"
+	echo "  -I             -i and delete original data file if no changes are made"
 	echo "  -n             Dry run; do not import"
 	echo "  -t             Data files are tab-delimited"
 	echo "  -V, --version  Print version and exit"
@@ -115,6 +121,41 @@ function usage()
 	exit 0
 }
 
+# iconvtable(table)
+function iconvtable()
+{
+	local table="$1"
+	local csvpath="$CSVDIR/$table.csv"
+	local csvutf8="$csvpath.utf8"
+
+	# Don't iconv file twice
+	[ -f "$csvutf8" ] && return
+
+	[ -f "$csvpath" ] || exit_error "...$table, no data file found!"
+
+	echo "...$table"
+
+	(
+		echo
+		echo "-- BEGIN ICONV: $table"
+
+		safe_exec "$ICONV_BIN" -c -f ascii -t UTF-8 -o "$csvutf8" "$csvpath"
+
+		if [ $? -ne 0 ]; then
+			echo_stderr "iconv may have encountered an error, see $(basename "$LOGPATH") for details"
+		elif [ $GETOPT_DRYRUN -eq 1 ]; then
+			:	
+		elif ! diff -q "$csvutf8" "$csvpath" 2>&1; then
+			echo_stderr "changes were made"
+		elif [ $GETOPT_ICONVDELETE -eq 1 ]; then
+			 safe_exec /bin/rm -f "$csvpath"
+		fi
+
+		echo "-- END ICONV: $table"
+
+	) >> "$LOGPATH"
+}
+
 # importtable(table)
 function importtable()
 {
@@ -122,8 +163,11 @@ function importtable()
 	local csvpath="$CSVDIR/$table.csv"
 	local fieldpath="$FIELDSDIR/$table.fields"
 	local filetype="csv"
+	local csvutf8="$csvpath.utf8"
+	local utfmsg=
 
 	[ $GETOPT_TABDELIMITED -eq 1 ] && filetype="tsv"
+	[ -f "$csvutf8" ] && csvpath="$csvutf8" && utfmsg=" (.utf8)"
 
 	[ -f "$csvpath" ] || exit_error "...$table, no data file found!"
 	[ -f "$fieldpath" ] || exit_error "...$table, no field file found!"
@@ -135,15 +179,15 @@ function importtable()
 
 	[ -n "$fields" ] || exit_error "...$table, no import fields defined!"
 
-	echo "...$table"
+	echo "...${table}${utfmsg}"
 
 	(
 		echo
-		echo "-- BEGIN TABLE: $table"
+		echo "-- BEGIN IMPORT: ${table}${utfmsg}"
 		echo "fields: $fields"
 		safe_exec mongoimport --db "$IMPORTDB" --type "$filetype" --drop -c "$table" --file "$csvpath" --fields "${fields// /}" $IMPORTARGS
 		[ $? -eq 0 ] || echo_stderr "see $(basename "$LOGPATH") for details"
-		echo "-- END TABLE: $table"
+		echo "-- END IMPORT: ${table}${utfmsg}"
 
 	) >> "$LOGPATH"
 }
@@ -167,6 +211,13 @@ function importtablejoin()
 
     local csvpath1="$CSVDIR/$jointable1.csv"
     local csvpath2="$CSVDIR/$jointable2.csv"
+	local csv1utf8="$csvpath1.utf8"
+	local csv2utf8="$csvpath2.utf8"
+	local utfmsg1=
+	local utfmsg2=
+
+	[ -f "$csv1utf8" ] && csvpath1="$csv1utf8" && utfmsg1=" (.utf8)"
+	[ -f "$csv2utf8" ] && csvpath2="$csv2utf8" && utfmsg2=" (.utf8)"
 
 	[ -f "$csvpath1" ] || exit_error "$csvpath1: No such file"
 	[ -f "$csvpath2" ] || exit_error "$csvpath2: No such file"
@@ -198,8 +249,8 @@ function importtablejoin()
 
 	(
 		echo
-		echo "-- BEGIN TABLE: $newtable"
-		echo "joining: $jointable1, $jointable2 where $joinfield1 = $joinfield2"
+		echo "-- BEGIN IMPORT: $newtable"
+		echo "joining: ${jointable1}${utfmsg1}, ${jointable2}${utfmsg2} where $joinfield1 = $joinfield2"
 		echo "fields: $newfields"
 
 		if [ $GETOPT_DRYRUN -eq 1 ]; then
@@ -217,7 +268,7 @@ function importtablejoin()
 
 		[ $? -eq 0 ] || echo_stderr "see $(basename "$LOGPATH") for details"
 
-		echo "-- END TABLE: $table"
+		echo "-- END IMPORT: $newtable"
 
 	) >> "$LOGPATH"
 }
@@ -233,11 +284,13 @@ case "$1" in
 esac
 
 # Parse command line options
-while getopts "d:hntV" opt
+while getopts "d:hiIntV" opt
 do
 	case $opt in
 	d  ) OUTPUTDIR="$OPTARG";;
 	h  ) usage;;
+	i  ) GETOPT_ICONV=1;;
+	I  ) GETOPT_ICONV=1; GETOPT_ICONVDELETE=1;;
 	n  ) GETOPT_DRYRUN=1;;
 	t  ) GETOPT_TABDELIMITED=1;;
 	V  ) version;;
@@ -260,7 +313,6 @@ elif [ -n "$1" ]; then
 	exit_arg_error "mongoimport arguments must be preceded by '--'"
 fi
 
-[ -n "$OUTPUTDIR" ] || exit_arg_error "missing output directory"
 [ -n "$CSVDIR" ] || exit_arg_error "missing data directory"
 [ -n "$IMPORTDB" ] || exit_arg_error "missing import database"
 
@@ -282,6 +334,8 @@ LOGPATH="$OUTPUTDIR/mongoimport.log"
 [ -f "$TABLESPATH" ] || exit_error "$TABLESPATH: No such file"
 [ -r "$TABLESPATH" ] || exit_error "$TABLESPATH: Read permission denied"
 
+[ $GETOPT_ICONV -eq 0 ] || [ -x "$ICONV_BIN" ] || exit_error "$ICONV_BIN: Cannot locate the iconv binary, confirm it is on your PATH"
+
 # We need to know if any of our pipe commands fail, not just the last one
 set -o pipefail
 
@@ -295,9 +349,21 @@ JOINTABLES=( )
 jointablesmod=$(( ${#JOINTABLES[@]} % 4 ))
 [ $jointablesmod -eq 0 ] || exit_error "$JOINTABLESPATH: invalid format"
 
-echo "Importing ${#TABLES[@]} tables into Mongo database '$IMPORTDB'..."
-
 echo "Results of mongoimport of ${#TABLES[@]} tables into Mongo database '$IMPORTDB'..." > "$LOGPATH"
+
+if [ $GETOPT_ICONV -eq 1 ]; then
+	echo "Converting data files to UTF-8..."
+
+	for table in "${TABLES[@]}"
+	do
+		iconvtable "$table"
+	done
+
+	echo "Done!"
+	echo
+fi
+
+echo "Importing ${#TABLES[@]} tables into Mongo database '$IMPORTDB'..."
 
 for table in "${TABLES[@]}"
 do
@@ -310,6 +376,6 @@ do
 done
 
 echo -e "\nImport complete!" >> "$LOGPATH"
-echo "Import complete!"
+echo "Done!"
 
 exit 0
